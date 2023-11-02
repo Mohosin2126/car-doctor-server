@@ -29,9 +29,13 @@ async function run() {
     await client.connect();
     // Send a ping to confirm a successful connection
 
+const serviceCollection =client.db('carDoctor').collection("services")
 
-
-
+app.get('/services',async(req,res)=>{
+    const cursor=serviceCollection.find()
+    const result=await cursor.toArray()
+    res.send(result)
+})
 
 
     await client.db("admin").command({ ping: 1 });
