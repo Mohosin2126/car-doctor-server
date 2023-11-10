@@ -48,8 +48,6 @@ app.post("/jwt",async(req,res)=>{
   .send({ success: true })
 })
 
-
-
 // services related api
 app.get('/services',async(req,res)=>{
     const cursor=serviceCollection.find()
