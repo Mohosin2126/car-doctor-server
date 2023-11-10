@@ -1,19 +1,21 @@
-const express=require('express')
-const cors =require('cors')
-const jwt=require('jsonwebtoken')
+const express = require('express');
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const app=express()
-const port=process.env.PORT || 5000;
+const app = express();
+const port = process.env.PORT || 5000; // Change the port to 5001
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-require('dotenv').config()
-//middleware 
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
-    credentials: true
-}))
-app.use(express.json())
-app.use(cookieParser());
+require('dotenv').config();
 
+// middleware
+app.use(
+  cors({
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.crat2tn.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -23,7 +25,7 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
@@ -32,101 +34,94 @@ async function run() {
     await client.connect();
     // Send a ping to confirm a successful connection
 
-const serviceCollection =client.db('carDoctor').collection("services")
-const bookingCollection=client.db("carDoctor").collection("bookings")
+    const serviceCollection = client.db('carDoctor').collection('services');
+    const bookingCollection = client.db('carDoctor').collection('bookings');
 
-// auth related api
-app.post("/jwt",async(req,res)=>{
-  const user=req.body 
-  const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
-  res
-  .cookie('token', token, {
-      httpOnly: true,
-      secure: false,
-      samesite:'none'
-  })
-  .send({ success: true })
-})
+    // auth related api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '1h',
+      });
+      res
+        .cookie('token', token, {
+          httpOnly: true,
+          secure: false,
+          samesite: 'none',
+        })
+        .send({ success: true });
+    });
 
-// services related api
-app.get('/services',async(req,res)=>{
-    const cursor=serviceCollection.find()
-    const result=await cursor.toArray()
-    res.send(result)
-})
+    // services related api
+    app.get('/services', async (req, res) => {
+      const cursor = serviceCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
-app.get('/services/:id',async(req,res)=>{
-    const id=req.params.id
-    const query={ _id: new ObjectId(id)}
-    
-    const options = {
+    app.get('/services/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const options = {
         // Include only the `title` and `imdb` fields in the returned document
-        projection: {_id:1, title: 1, price: 1, service_id: 1, img: 1 },
-    };
+        projection: { _id: 1, title: 1, price: 1, service_id: 1, img: 1 },
+      };
 
-    const result =await serviceCollection.findOne(query , options)
-    res.send(result)
-})
+      const result = await serviceCollection.findOne(query, options);
+      res.send(result);
+    });
 
-app.post("/bookings",async(req,res)=>{
-  const booking=req.body
-const result=await bookingCollection.insertOne(booking)
-res.send(result)
-})
+    app.post('/bookings', async (req, res) => {
+      const booking = req.body;
+      const result = await bookingCollection.insertOne(booking);
+      res.send(result);
+    });
 
+    app.get('/bookings', async (req, res) => {
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
+      const result = await bookingCollection.find(query).toArray();
+      res.send(result);
+    });
 
-app.get('/bookings', async (req, res) => {
-  let query = {};
-  if (req.query?.email) {
-      query = { email: req.query.email }
-  }
-  const result = await bookingCollection.find(query).toArray();
-  res.send(result);
-})
+    app.patch('/bookings/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedBooking = req.body;
 
+      const updateDoc = {
+        $set: {
+          status: updatedBooking.status,
+        },
+      };
+      const result = await bookingCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
 
-app.patch('/bookings/:id', async (req, res) => {
-  const id = req.params.id;
-  const filter = { _id: new ObjectId(id) };
-  const updatedBooking = req.body;
+    app.delete('/bookings/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
+    });
 
-  const updateDoc = {
-      $set: {
-          status: updatedBooking.status
-      },
-  };
-  const result = await bookingCollection.updateOne(filter, updateDoc);
-  res.send(result);
-})
-
-
-
-app.delete('/bookings/:id', async (req, res) => {
-  const id = req.params.id;
-  const query = { _id: new ObjectId(id) }
-  const result = await bookingCollection.deleteOne(query);
-  res.send(result);
-})
-
-
-
-
-
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    await client.db('admin').command({ ping: 1 });
+    console.log('Pinged your deployment. You successfully connected to MongoDB!');
   } finally {
     // Ensures that the client will close when you finish/error
-    // await client.close();
+    await client.close();
   }
 }
+
 run().catch(console.dir);
 
+app.get('/', (req, res) => {
+  res.send('car doctor is running');
+});
 
-
-app.get('/',(req,res)=>{
-    res.send('car doctor is running')
-})
-
-app.listen(port,()=>{
-    console.log(`car doctor server is running on port ${port}`)
-})
+app.listen(port, () => {
+  console.log(`car doctor server is running on port ${port}`);
+});
