@@ -18,24 +18,28 @@ app.use(express.json());
 app.use(cookieParser());
 
 // self middleware made 
-const logger=async(req,res,next)=>{
-  console.log("called",req.host,req.originalUrl)
-  next()
-}
+const logger = async (req, res, next) => {
+  console.log("called", req.hostname, req.originalUrl); // Change req.host to req.hostname
+  next();
+};
 
-
-const verifyToken=async(req,res,next)=>{
-  const token=req.cookies?.token
-  console.log('value of token in middleware',token)
-  if(!token){
-    return res.status(401).send({message:"Forbidden"})
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  console.log('value of token in middleware', token);
+  if (!token) {
+    return res.status(401).send({ message: "Forbidden" });
   }
-  next()
-}
-
-
-
-
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    // error 
+    if (err) {
+      console.log(err);
+      return res.status(401).send({ message: "unauthorized" });
+    }
+    // if token is valid then it would be decoded 
+    console.log("value in the token", decoded);
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.crat2tn.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -49,16 +53,16 @@ const client = new MongoClient(uri, {
 });
 
 async function run() {
+  let connection;
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
+    // Connect the client to the server (optional starting in v4.7)
+    connection = await client.connect();
 
     const serviceCollection = client.db('carDoctor').collection('services');
     const bookingCollection = client.db('carDoctor').collection('bookings');
 
     // auth related api
-    app.post('/jwt', logger,async (req, res) => {
+    app.post('/jwt', logger, async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: '1h',
@@ -73,7 +77,7 @@ async function run() {
     });
 
     // services related api
-    app.get('/services',logger, verifyToken,async (req, res) => {
+    app.get('/services', logger, verifyToken, async (req, res) => {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -92,13 +96,13 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/bookings', logger,verifyToken,async (req, res) => {
+    app.post('/bookings', logger, verifyToken, async (req, res) => {
       const booking = req.body;
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
-    app.get('/bookings',logger, verifyToken,async (req, res) => {
+    app.get('/bookings', logger, verifyToken, async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
@@ -131,8 +135,10 @@ async function run() {
     await client.db('admin').command({ ping: 1 });
     console.log('Pinged your deployment. You successfully connected to MongoDB!');
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+    // Ensure that the client will close when you finish/error
+    if (connection) {
+      // await client.close();
+    }
   }
 }
 
