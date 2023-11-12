@@ -92,13 +92,13 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/bookings',verifyToken, logger,async (req, res) => {
+    app.post('/bookings', logger,verifyToken,async (req, res) => {
       const booking = req.body;
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
-    app.get('/bookings',verifyToken,logger, async (req, res) => {
+    app.get('/bookings',logger, verifyToken,async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
