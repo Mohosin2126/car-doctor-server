@@ -24,7 +24,14 @@ const logger=async(req,res,next)=>{
 }
 
 
-
+const verifyToken=async(req,res,next)=>{
+  const token=req.cookies?.token
+  console.log('value of token in middleware',token)
+  if(!token){
+    return res.status(401).send({message:"Forbidden"})
+  }
+  next()
+}
 
 
 
