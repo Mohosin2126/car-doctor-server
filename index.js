@@ -73,7 +73,7 @@ async function run() {
     });
 
     // services related api
-    app.get('/services',logger, async (req, res) => {
+    app.get('/services',logger, verifyToken,async (req, res) => {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -92,13 +92,13 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/bookings', logger,async (req, res) => {
+    app.post('/bookings',verifyToken, logger,async (req, res) => {
       const booking = req.body;
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
-    app.get('/bookings',logger, async (req, res) => {
+    app.get('/bookings',verifyToken,logger, async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
