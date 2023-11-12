@@ -29,6 +29,7 @@ const logger=async(req,res,next)=>{
 
 
 
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.crat2tn.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -65,7 +66,7 @@ async function run() {
     });
 
     // services related api
-    app.get('/services', async (req, res) => {
+    app.get('/services',logger, async (req, res) => {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -84,13 +85,13 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/bookings', async (req, res) => {
+    app.post('/bookings', logger,async (req, res) => {
       const booking = req.body;
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
-    app.get('/bookings', async (req, res) => {
+    app.get('/bookings',logger, async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
